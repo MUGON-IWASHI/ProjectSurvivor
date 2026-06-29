@@ -2,6 +2,7 @@
 
 
 #include "Character/PlayerCharacter.h"
+#include "Weapon/WeaponBase.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 
@@ -33,6 +34,20 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	if (WeaponClass != nullptr) {
+
+		CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
+
+		if (CurrentWeapon != nullptr) {
+
+			CurrentWeapon->AttachToComponent(
+				GetMesh(),
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+				TEXT("WeaponSocket")
+			);
+		}
+	}
 	
 }
 
@@ -53,6 +68,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &APlayerCharacter::Fire);
 	}
 
 }
@@ -80,6 +96,12 @@ void APlayerCharacter::Look(const FInputActionValue& Value) {
 	if (Controller != nullptr) {
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+void APlayerCharacter::Fire() {
+	if (CurrentWeapon != nullptr) {
+		CurrentWeapon->Fire();
 	}
 }
 

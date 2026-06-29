@@ -9,6 +9,8 @@
 #include "InputActionValue.h"
 #include "PlayerCharacter.generated.h"
 
+class AWeaponBase;
+
 UCLASS()
 class PROJECTSURVIVOR_API APlayerCharacter : public ACharacter
 {
@@ -30,7 +32,10 @@ protected:
 	class UInputAction* LookAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	class UInputAction* JumpAction;\
+	class UInputAction* JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	class UInputAction* FireAction;
 
 	void Move(const FInputActionValue& Value);
 
@@ -38,6 +43,16 @@ protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+protected:
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AWeaponBase> WeaponClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	AWeaponBase* CurrentWeapon;
+
+	void Fire();
 
 public:	
 	// Called every frame
