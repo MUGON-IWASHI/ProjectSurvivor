@@ -5,6 +5,7 @@
 #include "Weapon/WeaponBase.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/Engine.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -20,6 +21,8 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -38,6 +41,7 @@ void APlayerCharacter::BeginPlay()
 	if (WeaponClass != nullptr) {
 
 		CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
+		CurrentWeapon->SetOwner(this);
 
 		if (CurrentWeapon != nullptr) {
 
@@ -55,6 +59,46 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (HealthComponent != nullptr && GEngine != nullptr)
+	{
+		const FString HealthText = FString::Printf(
+			TEXT("HP: %.0f / %.0f"),
+			HealthComponent->GetCurrentHealth(),
+			HealthComponent->GetMaxHealth()
+		);
+
+		GEngine->AddOnScreenDebugMessage(
+			1,
+			0.0f,
+			FColor::Green,
+			HealthText
+		);
+	}
+
+	if (!bIsGameOver &&
+		HealthComponent != nullptr &&
+		HealthComponent->IsDead())
+	{
+		bIsGameOver = true;
+
+		if (GEngine != nullptr)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				2,
+				5.0f,
+				FColor::Red,
+				TEXT("GAME OVER")
+			);
+		}
+
+		APlayerController* PC = Cast<APlayerController>(GetController());
+
+		if (PC != nullptr)
+		{
+			PC->SetPause(true);
+		}
+	}
 
 }
 

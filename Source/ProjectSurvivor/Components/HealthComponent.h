@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Health")
 	float GetCurrentHealth() const;
 
+	UFUNCTION(BlueprintPure, Category = "Health")
+	float GetMaxHealth() const;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

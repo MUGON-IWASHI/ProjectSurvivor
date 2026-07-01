@@ -37,13 +37,25 @@ void AWeaponBase::Tick(float DeltaTime)
 
 void AWeaponBase::Fire() {
 
-	if (ProjectileClass == nullptr) {
+	if (ProjectileClass == nullptr)
+	{
 		return;
 	}
 
 	const FVector SpawnLocation = MuzzlePoint->GetComponentLocation();
 	const FRotator SpawnRotation = MuzzlePoint->GetComponentRotation();
 
-	GetWorld()->SpawnActor<AProjectileBase>(ProjectileClass, SpawnLocation, SpawnRotation);
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = GetOwner();
+	SpawnParams.Instigator = GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	GetWorld()->SpawnActor<AProjectileBase>(
+		ProjectileClass,
+		SpawnLocation,
+		SpawnRotation,
+		SpawnParams
+	);
 }
 

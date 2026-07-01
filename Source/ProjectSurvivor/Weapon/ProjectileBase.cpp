@@ -51,7 +51,8 @@ void AProjectileBase::OnOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (OtherActor == nullptr || OtherActor == this)
+
+	if (OtherActor == nullptr || OtherActor == this || OtherActor == GetOwner())
 	{
 		return;
 	}
