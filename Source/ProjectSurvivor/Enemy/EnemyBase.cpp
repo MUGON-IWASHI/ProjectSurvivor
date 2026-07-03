@@ -4,6 +4,7 @@
 #include "Enemy/EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Items/ExperienceOrb.h"
 #include "Components/HealthComponent.h"
 
 // Sets default values
@@ -100,5 +101,23 @@ void AEnemyBase::TryAttackPlayer(ACharacter* PlayerCharacter) {
 			//PlayerCharacter->Destroy();
 		}
 	}
+}
+
+void AEnemyBase::DropExperienceOrb() {
+
+	if (ExperienceOrbClass == nullptr) {
+		return;
+	}
+
+	GetWorld()->SpawnActor<AExperienceOrb>(
+		ExperienceOrbClass,
+		GetActorLocation(),
+		FRotator::ZeroRotator
+	);
+}
+
+void AEnemyBase::Die() {
+	DropExperienceOrb();
+	Destroy();
 }
 

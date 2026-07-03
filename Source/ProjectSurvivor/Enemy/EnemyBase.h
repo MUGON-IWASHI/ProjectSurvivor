@@ -7,6 +7,8 @@
 #include "Components/HealthComponent.h"
 #include "EnemyBase.generated.h"
 
+class AExperienceOrb;
+
 UCLASS()
 class PROJECTSURVIVOR_API AEnemyBase : public ACharacter
 {
@@ -26,6 +28,8 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	void Die();
 
 private:
 
@@ -49,9 +53,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
 	float AttackInterval = 1.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Drop")
+	TSubclassOf<AExperienceOrb> ExperienceOrbClass;
+
 	float LastAttackTime = 0.0f;
 
 	void TryAttackPlayer(ACharacter* PlayerCharacter);
 
 	void MoveToPlayer(float DeltaTime);
+
+	void DropExperienceOrb();
 };

@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 #include "Components/HealthComponent.h"
+#include "Components/ExperienceComponent.h"
 #include "PlayerCharacter.generated.h"
 
 class AWeaponBase;
@@ -37,6 +38,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	class UInputAction* FireAction;
+
+	UFUNCTION()
+	void HandleLevelUp(int32 NewLevel);
 
 	void Move(const FInputActionValue& Value);
 
@@ -69,6 +73,9 @@ private:
 	UCameraComponent* FollowCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UHealthComponent* HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UExperienceComponent* ExperienceComponent;
 
 	bool bIsGameOver = false;
 

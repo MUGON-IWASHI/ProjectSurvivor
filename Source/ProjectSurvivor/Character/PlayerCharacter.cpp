@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/Engine.h"
+#include "Components/ExperienceComponent.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -23,6 +24,7 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
+	ExperienceComponent = CreateDefaultSubobject<UExperienceComponent>(TEXT("ExperienceComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -52,6 +54,14 @@ void APlayerCharacter::BeginPlay()
 			);
 		}
 	}
+
+	if (ExperienceComponent != nullptr) {
+
+		ExperienceComponent->OnLevelUp.AddDynamic(
+			this,
+			&APlayerCharacter::HandleLevelUp
+		);
+	}
 	
 }
 
@@ -73,6 +83,23 @@ void APlayerCharacter::Tick(float DeltaTime)
 			0.0f,
 			FColor::Green,
 			HealthText
+		);
+	}
+
+	if (ExperienceComponent != nullptr && GEngine != nullptr) {
+
+		const FString ExpText = FString::Printf(
+			TEXT("Level: %d, EXP: %d / %d"),
+			ExperienceComponent->GetCurrentLevel(),
+			ExperienceComponent->GetCurrentExperience(),
+			ExperienceComponent->GetRequiredExperience()
+		);
+
+		GEngine->AddOnScreenDebugMessage(
+			3,
+			0.0f,
+			FColor::Cyan,
+			ExpText
 		);
 	}
 
@@ -149,3 +176,20 @@ void APlayerCharacter::Fire() {
 	}
 }
 
+void APlayerCharacter::HandleLevelUp(int32 NewLevel) {
+
+	if (GEngine != nullptr) {
+
+		const FString LevelUpText = FString::Printf(
+			TEXT("LEVEL UP! lv.%d"),
+			NewLevel
+		);
+
+		GEngine->AddOnScreenDebugMessage(
+			4,
+			3.0f,
+			FColor::Yellow,
+			LevelUpText
+		);
+	}
+}

@@ -3,6 +3,7 @@
 
 #include "Weapon/ProjectileBase.h"
 #include "Components/HealthComponent.h"
+#include "Enemy/EnemyBase.h"
 
 // Sets default values
 AProjectileBase::AProjectileBase()
@@ -68,7 +69,13 @@ void AProjectileBase::OnOverlap(
 
 	if (HealthComponent->IsDead())
 	{
-		OtherActor->Destroy();
+		if (AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor))
+		{
+			Enemy->Die();
+		}
+		else {
+			OtherActor->Destroy();
+		}
 	}
 
 	Destroy();
