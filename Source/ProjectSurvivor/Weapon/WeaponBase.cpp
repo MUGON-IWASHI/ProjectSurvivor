@@ -51,11 +51,36 @@ void AWeaponBase::Fire() {
 	SpawnParams.SpawnCollisionHandlingOverride =
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	GetWorld()->SpawnActor<AProjectileBase>(
+	AProjectileBase* Projectile = GetWorld()->SpawnActor<AProjectileBase>(
 		ProjectileClass,
 		SpawnLocation,
 		SpawnRotation,
 		SpawnParams
 	);
+	
+	if (Projectile != nullptr)
+	{
+		Projectile->SetDamage(AttackDamage);
+	}
+
+}
+
+void AWeaponBase::IncreaseAttackDamage(float Amount) {
+
+	if (Amount <= 0.0f) {
+		return;
+	}
+
+	AttackDamage += Amount;
+
+	if (GEngine != nullptr) {
+
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.0f,
+			FColor::Green,
+			FString::Printf(TEXT("Attack Damage increased to: %.1f"), AttackDamage)
+		);
+	}
 }
 

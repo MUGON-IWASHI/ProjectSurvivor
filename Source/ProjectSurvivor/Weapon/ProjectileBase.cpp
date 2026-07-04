@@ -81,3 +81,7 @@ void AProjectileBase::OnOverlap(
 	Destroy();
 }
 
+void AProjectileBase::SetDamage(float NewDamage)
+{
+	Damage = NewDamage;
+}

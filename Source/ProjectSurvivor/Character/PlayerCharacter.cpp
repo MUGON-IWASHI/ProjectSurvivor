@@ -192,4 +192,8 @@ void APlayerCharacter::HandleLevelUp(int32 NewLevel) {
 			LevelUpText
 		);
 	}
+
+	if (CurrentWeapon != nullptr) {
+		CurrentWeapon->IncreaseAttackDamage(5.0f);
+	}
 }

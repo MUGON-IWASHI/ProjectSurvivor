@@ -46,4 +46,7 @@ public:
 		bool bFromSweep,
 		const FHitResult& SweepResult
 	);
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SetDamage(float NewDamage);
 };
