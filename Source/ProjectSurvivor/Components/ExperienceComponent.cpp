@@ -29,7 +29,7 @@ void UExperienceComponent::AddExperience(int32 Amount)
 void UExperienceComponent::LevelUp()
 {
 	CurrentLevel++;
-	RequiredExperience = CurrentLevel * 100;
+	RequiredExperience = CurrentLevel * 20;
 
 	OnLevelUp.Broadcast(CurrentLevel);
 }

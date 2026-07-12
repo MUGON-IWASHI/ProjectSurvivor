@@ -52,15 +52,6 @@ void AExperienceOrb::OnOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (GEngine != nullptr)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			2.0f,
-			FColor::Yellow,
-			TEXT("Orb Overlap")
-		);
-	}
 
 	if (OtherActor == nullptr || OtherActor == this)
 	{

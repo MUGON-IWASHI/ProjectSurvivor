@@ -13,6 +13,14 @@
 
 class AWeaponBase;
 
+class ULevelUpWidget;
+
+class AWeaponBase;
+
+class UUserWidget;
+
+class USoundBase;
+
 UCLASS()
 class PROJECTSURVIVOR_API APlayerCharacter : public ACharacter
 {
@@ -39,17 +47,44 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	class UInputAction* FireAction;
 
-	UFUNCTION()
-	void HandleLevelUp(int32 NewLevel);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LevelUp")
+	float AttackDamageUpgradeAmount = 5.0f;
 
-	void Move(const FInputActionValue& Value);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LevelUp")
+	float MoveSpeedUpgradeAmount = 50.0f;
 
-	void Look(const FInputActionValue& Value);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<ULevelUpWidget> LevelUpWidgetClass;
 
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> GameOverWidgetClass;
 
-protected:
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> GameClearWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> GameHUDWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* LevelUpSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* GameClearSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* GameOverSound = nullptr;
+
+	UPROPERTY()
+	ULevelUpWidget* LevelUpWidget;
+
+	UPROPERTY()
+	UUserWidget* GameOverWidget = nullptr;
+
+	UPROPERTY()
+	UUserWidget* GameClearWidget = nullptr;
+
+	UPROPERTY()
+	UUserWidget* GameHUDWidget = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> WeaponClass;
@@ -57,7 +92,61 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	AWeaponBase* CurrentWeapon;
 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<AWeaponBase> EvolvedWeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<AWeaponBase> SecondaryWeaponClass;
+
+	UPROPERTY()
+	AWeaponBase* SecondaryWeapon = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Game")
+	float ClearTime = 120.0f;
+
+	UFUNCTION(BlueprintPure, Category = "UI")
+	float GetCurrentHealth() const;
+
+	UFUNCTION(BlueprintPure, Category = "UI")
+	float GetMaxHealth() const;
+
+	UFUNCTION(BlueprintPure, Category = "UI")
+	int32 GetCurrentLevel() const;
+
+	UFUNCTION()
+	void HandleLevelUp(int32 NewLevel);
+
+	UFUNCTION()
+	void EvolveWeapon();
+
+	UFUNCTION()
+	void ShowGameOver();
+
+	UFUNCTION()
+	void HandleWeaponEvolutionReady();
+
+	UFUNCTION()
+	void HandleLaserWeaponSelected();
+
+	UFUNCTION()
+	void AcquireSecondaryWeapon();
+
+	UFUNCTION()
+	void ShowGameClear();
+
+	void Move(const FInputActionValue& Value);
+
+	void Look(const FInputActionValue& Value);
+
 	void Fire();
+
+	float ElapsedGameTime = 0.0f;
+
+	bool bIsGameClear = false;
+
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
 
 public:	
 	// Called every frame
@@ -65,6 +154,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(BlueprintPure, Category = "Game")
+	float GetRemainingTime() const;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera",meta = (AllowPrivateAccess = "true"))
@@ -78,5 +170,31 @@ private:
 	UExperienceComponent* ExperienceComponent;
 
 	bool bIsGameOver = false;
+
+	UFUNCTION()
+	void ApplyAttackDamageUpgrade();
+
+	UFUNCTION()
+	void ApplyMoveSpeedUpgrade();
+
+	UFUNCTION()
+	void ApplyFireRateUpgrade();
+
+	UFUNCTION()
+	void ApplyProjectileCountUpgrade();
+
+	void CloseLevelUpWidget();
+
+	FTimerHandle FireTimerHandle;
+
+	void StartAutoFire();
+
+	void AutoFire();
+
+	FTimerHandle SecondaryFireTimerHandle;
+
+	void StartSecondaryAutoFire();
+
+	void SecondaryAutoFire();
 
 };

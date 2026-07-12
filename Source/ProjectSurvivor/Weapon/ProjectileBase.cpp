@@ -14,11 +14,21 @@ AProjectileBase::AProjectileBase()
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComponent"));
 	SetRootComponent(CollisionComponent);
 	CollisionComponent->InitSphereRadius(15.0f);
+	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionComponent->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	CollisionComponent->SetGenerateOverlapEvents(true);
+	CollisionComponent->CanCharacterStepUpOn =
+		ECanBeCharacterBase::ECB_No;
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
 	MeshComponent->SetupAttachment(CollisionComponent);
+	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshComponent->SetGenerateOverlapEvents(false);
+	MeshComponent->CanCharacterStepUpOn =
+		ECanBeCharacterBase::ECB_No;
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
+	ProjectileMovementComponent->UpdatedComponent = CollisionComponent;
 	ProjectileMovementComponent->InitialSpeed = 3000.0f;
 	ProjectileMovementComponent->MaxSpeed = 3000.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
@@ -53,7 +63,7 @@ void AProjectileBase::OnOverlap(
 	const FHitResult& SweepResult)
 {
 
-	if (OtherActor == nullptr || OtherActor == this || OtherActor == GetOwner())
+	if (OtherActor == nullptr || OtherActor == this || OtherActor == GetOwner() || OtherActor == GetInstigator())
 	{
 		return;
 	}

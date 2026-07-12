@@ -3,6 +3,7 @@
 
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ProjectileBase.h"
+#include "Components/PrimitiveComponent.h"
 
 // Sets default values
 AWeaponBase::AWeaponBase()
@@ -42,25 +43,82 @@ void AWeaponBase::Fire() {
 		return;
 	}
 
-	const FVector SpawnLocation = MuzzlePoint->GetComponentLocation();
-	const FRotator SpawnRotation = MuzzlePoint->GetComponentRotation();
+	AActor* WeaponOwner = GetOwner();
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = GetInstigator();
-	SpawnParams.SpawnCollisionHandlingOverride =
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	AProjectileBase* Projectile = GetWorld()->SpawnActor<AProjectileBase>(
-		ProjectileClass,
-		SpawnLocation,
-		SpawnRotation,
-		SpawnParams
-	);
-	
-	if (Projectile != nullptr)
+	if (WeaponOwner == nullptr)
 	{
-		Projectile->SetDamage(AttackDamage);
+		return;
+	}
+
+	const FVector FireDirection =
+		WeaponOwner->GetActorForwardVector();
+
+	const FVector ForwardOffset =
+		FireDirection * 100.0f;
+
+	const FVector SpawnLocation =
+		MuzzlePoint->GetComponentLocation() + ForwardOffset;
+
+	const FRotator BaseRotation =
+		FireDirection.Rotation();
+
+	for (int32 i = 0; i < ProjectileCount; ++i)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = GetOwner();
+		SpawnParams.Instigator = GetInstigator();
+		SpawnParams.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		const float AngleBetweenProjectiles = 10.0f;
+		const float SideSpacing = 20.0f;
+
+		const float AngleOffset =
+			(i - (ProjectileCount - 1) / 2.0f) * AngleBetweenProjectiles;
+
+		const float SideOffset =
+			(i - (ProjectileCount - 1) / 2.0f) * SideSpacing;
+
+		FRotator SpawnRotation = BaseRotation;
+		SpawnRotation.Yaw += AngleOffset;
+
+		const FVector ProjectileSpawnLocation =
+			SpawnLocation + MuzzlePoint->GetRightVector() * SideOffset;
+
+		AProjectileBase* Projectile = GetWorld()->SpawnActor<AProjectileBase>(
+			ProjectileClass,
+			ProjectileSpawnLocation,
+			SpawnRotation,
+			SpawnParams
+		);
+
+		if (Projectile != nullptr)
+		{
+			Projectile->SetDamage(AttackDamage);
+
+			
+
+			if (WeaponOwner != nullptr)
+			{
+				if (UPrimitiveComponent* ProjectileRoot =
+					Cast<UPrimitiveComponent>(Projectile->GetRootComponent()))
+				{
+					ProjectileRoot->IgnoreActorWhenMoving(
+						WeaponOwner,
+						true
+					);
+				}
+
+				if (UPrimitiveComponent* OwnerRoot =
+					Cast<UPrimitiveComponent>(WeaponOwner->GetRootComponent()))
+				{
+					OwnerRoot->IgnoreActorWhenMoving(
+						Projectile,
+						true
+					);
+				}
+			}
+		}
 	}
 
 }
@@ -73,14 +131,62 @@ void AWeaponBase::IncreaseAttackDamage(float Amount) {
 
 	AttackDamage += Amount;
 
-	if (GEngine != nullptr) {
-
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			2.0f,
-			FColor::Green,
-			FString::Printf(TEXT("Attack Damage increased to: %.1f"), AttackDamage)
-		);
-	}
 }
 
+void AWeaponBase::LevelUpWeapon()
+{
+	++WeaponLevel;
+
+	if (WeaponLevel == 2)
+	{
+		IncreaseAttackDamage(5.0f);
+	}
+	else if (WeaponLevel == 3)
+	{
+		IncreaseProjectileCount();
+	}
+	else if (WeaponLevel == 4)
+	{
+		IncreaseProjectileCount();
+	}
+	else if (WeaponLevel == 5)
+	{
+		ReduceFireInterval(0.1f);
+
+		UE_LOG(LogTemp, Warning, TEXT("Evolution Broadcast!"));
+
+		OnWeaponEvolutionReady.Broadcast();
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Weapon Level : %d"), WeaponLevel);
+}
+
+void AWeaponBase::IncreaseProjectileCount()
+{
+	++ProjectileCount;
+
+	UE_LOG(LogTemp, Warning, TEXT("Projectile Count : %d"), ProjectileCount);
+}
+
+void AWeaponBase::ReduceFireInterval(float Amount)
+{
+	if (Amount <= 0.0f)
+	{
+		return;
+	}
+
+	FireInterval -= Amount;
+
+	if (FireInterval < 0.1f)
+	{
+		FireInterval = 0.1f;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Fire Interval : %.2f"), FireInterval);
+}
+
+float AWeaponBase::GetFireInterval() const
+{
+	return FireInterval;
+}

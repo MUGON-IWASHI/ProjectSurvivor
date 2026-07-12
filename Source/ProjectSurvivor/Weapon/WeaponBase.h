@@ -9,6 +9,7 @@
 #include "WeaponBase.generated.h"
 
 class AProjectileBase;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnWeaponEvolutionReady);
 
 UCLASS()
 class PROJECTSURVIVOR_API AWeaponBase : public AActor
@@ -30,15 +31,33 @@ public:
 public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void Fire();
+	virtual void Fire();
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void IncreaseAttackDamage(float Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void LevelUpWeapon();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void IncreaseProjectileCount();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void ReduceFireInterval(float Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	float GetFireInterval() const;
+
+	UPROPERTY(BlueprintAssignable,Category = "Weapon")
+	FOnWeaponEvolutionReady OnWeaponEvolutionReady;
 
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float AttackDamage = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float FireInterval = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AProjectileBase> ProjectileClass;
@@ -51,5 +70,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	int32 WeaponLevel = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	int32 ProjectileCount = 1;
 
 };

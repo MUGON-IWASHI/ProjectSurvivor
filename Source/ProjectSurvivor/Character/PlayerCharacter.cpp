@@ -7,6 +7,12 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/Engine.h"
 #include "Components/ExperienceComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "UI/LevelUpWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -47,13 +53,45 @@ void APlayerCharacter::BeginPlay()
 
 		if (CurrentWeapon != nullptr) {
 
+			CurrentWeapon->OnWeaponEvolutionReady.AddDynamic(
+				this,
+				&APlayerCharacter::HandleWeaponEvolutionReady
+			);
+
 			CurrentWeapon->AttachToComponent(
 				GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 				TEXT("WeaponSocket")
 			);
+
+			StartAutoFire();
 		}
 	}
+
+	if (GameHUDWidgetClass != nullptr)
+	{
+		GameHUDWidget = CreateWidget<UUserWidget>(
+			GetWorld(),
+			GameHUDWidgetClass
+		);
+
+		if (GameHUDWidget != nullptr)
+		{
+			GameHUDWidget->AddToViewport();
+
+			UE_LOG(LogTemp, Warning, TEXT("Game HUD Added"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to create Game HUD"));
+		}
+	}
+
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameHUDWidgetClass is nullptr"));
+	}
+	
 
 	if (ExperienceComponent != nullptr) {
 
@@ -78,12 +116,6 @@ void APlayerCharacter::Tick(float DeltaTime)
 			HealthComponent->GetMaxHealth()
 		);
 
-		GEngine->AddOnScreenDebugMessage(
-			1,
-			0.0f,
-			FColor::Green,
-			HealthText
-		);
 	}
 
 	if (ExperienceComponent != nullptr && GEngine != nullptr) {
@@ -95,12 +127,6 @@ void APlayerCharacter::Tick(float DeltaTime)
 			ExperienceComponent->GetRequiredExperience()
 		);
 
-		GEngine->AddOnScreenDebugMessage(
-			3,
-			0.0f,
-			FColor::Cyan,
-			ExpText
-		);
 	}
 
 	if (!bIsGameOver &&
@@ -109,21 +135,17 @@ void APlayerCharacter::Tick(float DeltaTime)
 	{
 		bIsGameOver = true;
 
-		if (GEngine != nullptr)
-		{
-			GEngine->AddOnScreenDebugMessage(
-				2,
-				5.0f,
-				FColor::Red,
-				TEXT("GAME OVER")
-			);
-		}
+		ShowGameOver();
+	}
 
-		APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!bIsGameOver && !bIsGameClear)
+	{
+		ElapsedGameTime += DeltaTime;
 
-		if (PC != nullptr)
+		if (ElapsedGameTime >= ClearTime)
 		{
-			PC->SetPause(true);
+			bIsGameClear = true;
+			ShowGameClear();
 		}
 	}
 
@@ -139,7 +161,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopJumping);
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &APlayerCharacter::Fire);
+		//EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &APlayerCharacter::Fire);
 	}
 
 }
@@ -178,6 +200,14 @@ void APlayerCharacter::Fire() {
 
 void APlayerCharacter::HandleLevelUp(int32 NewLevel) {
 
+	if (LevelUpSound != nullptr)
+	{
+		UGameplayStatics::PlaySound2D(
+			GetWorld(),
+			LevelUpSound
+		);
+	}
+
 	if (GEngine != nullptr) {
 
 		const FString LevelUpText = FString::Printf(
@@ -185,15 +215,373 @@ void APlayerCharacter::HandleLevelUp(int32 NewLevel) {
 			NewLevel
 		);
 
-		GEngine->AddOnScreenDebugMessage(
-			4,
-			3.0f,
-			FColor::Yellow,
-			LevelUpText
+	}
+
+	
+
+	if (LevelUpWidgetClass != nullptr) {
+
+		LevelUpWidget = CreateWidget<ULevelUpWidget>(GetWorld(), LevelUpWidgetClass);
+
+		if (LevelUpWidget != nullptr) {
+
+			LevelUpWidget->OnAttackDamageSelected.AddDynamic(
+				this,
+				&APlayerCharacter::ApplyAttackDamageUpgrade
+			);
+
+			LevelUpWidget->OnMoveSpeedSelected.AddDynamic(
+				this,
+				&APlayerCharacter::ApplyMoveSpeedUpgrade
+			);
+
+			LevelUpWidget->OnLaserWeaponSelected.AddDynamic(
+				this,
+				&APlayerCharacter::HandleLaserWeaponSelected
+			);
+
+			LevelUpWidget->OnFireRateSelected.AddDynamic(
+				this,
+				&APlayerCharacter::ApplyFireRateUpgrade
+			);
+
+			LevelUpWidget->OnProjectileCountSelected.AddDynamic(
+				this,
+				&APlayerCharacter::ApplyProjectileCountUpgrade
+			);
+
+			LevelUpWidget->AddToViewport();
+			
+			APlayerController* PlayerController = GetController<APlayerController>();
+
+			if (PlayerController != nullptr) {
+
+				PlayerController->SetPause(true);
+
+				PlayerController->SetShowMouseCursor(true);
+
+				FInputModeUIOnly InputMode;
+				PlayerController->SetInputMode(InputMode);
+			}
+		}
+	}
+}
+
+void APlayerCharacter::ApplyAttackDamageUpgrade() {
+
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->LevelUpWeapon();
+
+		StartAutoFire();
+	}
+
+	CloseLevelUpWidget();
+}
+
+void APlayerCharacter::ApplyMoveSpeedUpgrade()
+{
+	if (GetCharacterMovement() == nullptr)
+	{
+		return;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed += MoveSpeedUpgradeAmount;
+
+	CloseLevelUpWidget();
+}
+
+void APlayerCharacter::ApplyFireRateUpgrade()
+{
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->ReduceFireInterval(0.05f);
+		StartAutoFire();
+	}
+
+	CloseLevelUpWidget();
+}
+
+void APlayerCharacter::ApplyProjectileCountUpgrade()
+{
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->IncreaseProjectileCount();
+	}
+
+	CloseLevelUpWidget();
+}
+
+void APlayerCharacter::CloseLevelUpWidget()
+{
+	if (LevelUpWidget != nullptr)
+	{
+		LevelUpWidget->RemoveFromParent();
+		LevelUpWidget = nullptr;
+	}
+
+	APlayerController* PlayerController = GetController<APlayerController>();
+
+	if (PlayerController != nullptr)
+	{
+		PlayerController->SetPause(false);
+		PlayerController->SetShowMouseCursor(false);
+
+		FInputModeGameOnly InputMode;
+		PlayerController->SetInputMode(InputMode);
+	}
+}
+
+void APlayerCharacter::StartAutoFire()
+{
+	if (CurrentWeapon == nullptr)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		FireTimerHandle,
+		this,
+		&APlayerCharacter::AutoFire,
+		CurrentWeapon->GetFireInterval(),
+		true
+	);
+}
+
+void APlayerCharacter::AutoFire()
+{
+	Fire();
+}
+
+void APlayerCharacter::EvolveWeapon() {
+
+	if (CurrentWeapon == nullptr || EvolvedWeaponClass == nullptr) {
+
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("EvolveWeapon"));
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(
+		EvolvedWeaponClass,
+		CurrentWeapon->GetActorTransform(),
+		SpawnParams
+	);
+
+	if (NewWeapon == nullptr) {
+		return;
+	}
+
+	NewWeapon->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		TEXT("WeaponSocket")
+	);
+
+	CurrentWeapon->Destroy();
+	CurrentWeapon = NewWeapon;
+
+	CurrentWeapon->OnWeaponEvolutionReady.AddDynamic(
+		this,
+		&APlayerCharacter::HandleWeaponEvolutionReady
+	);
+
+	StartAutoFire();
+}
+
+void APlayerCharacter::HandleWeaponEvolutionReady() {
+
+	UE_LOG(LogTemp, Warning, TEXT("Evolution Event Received!"));
+
+	EvolveWeapon();
+}
+
+void APlayerCharacter::HandleLaserWeaponSelected()
+{
+	AcquireSecondaryWeapon();
+	CloseLevelUpWidget();
+}
+
+void APlayerCharacter::SecondaryAutoFire() {
+
+	if (SecondaryWeapon != nullptr)
+	{
+		SecondaryWeapon->Fire();
+	}
+}
+
+void APlayerCharacter::StartSecondaryAutoFire()
+{
+	if (SecondaryWeapon == nullptr)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(SecondaryFireTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		SecondaryFireTimerHandle,
+		this,
+		&APlayerCharacter::SecondaryAutoFire,
+		SecondaryWeapon->GetFireInterval(),
+		true
+	);
+}
+
+void APlayerCharacter::AcquireSecondaryWeapon()
+{
+	if (SecondaryWeapon != nullptr)
+	{
+		return;
+	}
+
+	if (SecondaryWeaponClass == nullptr)
+	{
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	SecondaryWeapon = GetWorld()->SpawnActor<AWeaponBase>(
+		SecondaryWeaponClass,
+		GetActorLocation(),
+		GetActorRotation(),
+		SpawnParams
+	);
+
+	if (SecondaryWeapon == nullptr)
+	{
+		return;
+	}
+
+	SecondaryWeapon->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		TEXT("WeaponSocket")
+	);
+
+	StartSecondaryAutoFire();
+}
+
+void APlayerCharacter::ShowGameOver()
+{
+	if (GameOverSound != nullptr)
+	{
+		UGameplayStatics::PlaySound2D(
+			GetWorld(),
+			GameOverSound
 		);
 	}
 
-	if (CurrentWeapon != nullptr) {
-		CurrentWeapon->IncreaseAttackDamage(5.0f);
+	if (GameOverWidgetClass == nullptr)
+	{
+		return;
 	}
+
+	GameOverWidget = CreateWidget<UUserWidget>(
+		GetWorld(),
+		GameOverWidgetClass
+	);
+
+	if (GameOverWidget == nullptr)
+	{
+		return;
+	}
+
+	GameOverWidget->AddToViewport();
+
+	APlayerController* PC =
+		Cast<APlayerController>(GetController());
+
+	if (PC != nullptr)
+	{
+		PC->SetPause(true);
+		PC->SetShowMouseCursor(true);
+
+		FInputModeUIOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+}
+
+void APlayerCharacter::ShowGameClear()
+{
+	if (GameClearSound != nullptr)
+	{
+		UGameplayStatics::PlaySound2D(
+			GetWorld(),
+			GameClearSound
+		);
+	}
+
+	APlayerController* PC =
+		Cast<APlayerController>(GetController());
+
+	if (PC != nullptr)
+	{
+		PC->SetPause(true);
+		PC->SetShowMouseCursor(true);
+
+		FInputModeUIOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+
+	if (GameClearWidgetClass == nullptr)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("GameClearWidgetClass is nullptr")
+		);
+		return;
+	}
+
+	GameClearWidget = CreateWidget<UUserWidget>(
+		GetWorld(),
+		GameClearWidgetClass
+	);
+
+	if (GameClearWidget == nullptr)
+	{
+		return;
+	}
+
+	GameClearWidget->AddToViewport();
+}
+
+float APlayerCharacter::GetRemainingTime() const
+{
+	return FMath::Max(ClearTime - ElapsedGameTime, 0.0f);
+}
+
+float APlayerCharacter::GetCurrentHealth() const
+{
+	return HealthComponent != nullptr
+		? HealthComponent->GetCurrentHealth()
+		: 0.0f;
+}
+
+float APlayerCharacter::GetMaxHealth() const
+{
+	return HealthComponent != nullptr
+		? HealthComponent->GetMaxHealth()
+		: 0.0f;
+}
+
+int32 APlayerCharacter::GetCurrentLevel() const
+{
+	return ExperienceComponent != nullptr
+		? ExperienceComponent->GetCurrentLevel()
+		: 1;
 }

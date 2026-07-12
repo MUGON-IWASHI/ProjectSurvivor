@@ -6,6 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Items/ExperienceOrb.h"
 #include "Components/HealthComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 // Sets default values
 AEnemyBase::AEnemyBase()
@@ -118,6 +120,14 @@ void AEnemyBase::DropExperienceOrb() {
 
 void AEnemyBase::Die() {
 	DropExperienceOrb();
+	if (DeathSound != nullptr)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			DeathSound,
+			GetActorLocation()
+		);
+	}
 	Destroy();
 }
 

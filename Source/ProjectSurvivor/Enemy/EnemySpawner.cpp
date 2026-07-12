@@ -33,11 +33,44 @@ void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	ElapsedTime += DeltaTime;
+
+	if (!bLateGameSpawnApplied &&
+		ElapsedTime >= LateGameTime)
+	{
+		bLateGameSpawnApplied = true;
+		UpdateSpawnInterval(LateGameSpawnInterval);
+	}
+	else if (!bMidGameSpawnApplied &&
+		ElapsedTime >= MidGameTime)
+	{
+		bMidGameSpawnApplied = true;
+		UpdateSpawnInterval(MidGameSpawnInterval);
+	}
+
 }
 
 void AEnemySpawner::SpawnEnemy() {
 
-	if (EnemyClass == nullptr) {
+	TSubclassOf<AEnemyBase> ClassToSpawn = EnemyClass;
+
+	const float RandomValue = FMath::FRand();
+
+	if (ElapsedTime >= TankEnemyUnlockTime &&
+		TankEnemyClass != nullptr &&
+		RandomValue < TankEnemySpawnChance)
+	{
+		ClassToSpawn = TankEnemyClass;
+	}
+	else if (ElapsedTime >= FastEnemyUnlockTime &&
+		FastEnemyClass != nullptr &&
+		RandomValue < TankEnemySpawnChance + FastEnemySpawnChance)
+	{
+		ClassToSpawn = FastEnemyClass;
+	}
+
+	if (ClassToSpawn == nullptr)
+	{
 		return;
 	}
 
@@ -59,9 +92,22 @@ void AEnemySpawner::SpawnEnemy() {
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
 	GetWorld()->SpawnActor<AEnemyBase>(
-		EnemyClass,
+		ClassToSpawn,
 		SpawnLocation,
 		SpawnRotation
+	);
+}
+
+void AEnemySpawner::UpdateSpawnInterval(float NewInterval)
+{
+	GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		SpawnTimerHandle,
+		this,
+		&AEnemySpawner::SpawnEnemy,
+		NewInterval,
+		true
 	);
 }
 

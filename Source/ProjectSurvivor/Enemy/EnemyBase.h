@@ -9,6 +9,8 @@
 
 class AExperienceOrb;
 
+class USoundBase;
+
 UCLASS()
 class PROJECTSURVIVOR_API AEnemyBase : public ACharacter
 {
@@ -55,6 +57,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Drop")
 	TSubclassOf<AExperienceOrb> ExperienceOrbClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* DeathSound = nullptr;
 
 	float LastAttackTime = 0.0f;
 

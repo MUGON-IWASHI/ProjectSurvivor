@@ -40,7 +40,7 @@ private:
 	int32 CurrentLevel = 1;
 
 	UPROPERTY(EditAnywhere, Category = "Experience")
-	int32 RequiredExperience = 100;
+	int32 RequiredExperience = 30;
 
 	void LevelUp();
 };
